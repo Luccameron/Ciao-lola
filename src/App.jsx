@@ -638,3 +638,381 @@ function ProfileProgress({scores,color}){
   );
 }
 
+export default function ItalianApp() {
+  const [profiles,   setProfiles]   = useState(DEFAULT_PROFILES);
+  const [activeId,   setActiveId]   = useState(null);
+  const [screen,     setScreen]     = useState("profiles");
+  const [theme,      setTheme]      = useState(null);
+  const [lessonIdx,  setLessonIdx]  = useState(0);
+  const [flipped,    setFlipped]    = useState({});
+  const [quizState,  setQuizState]  = useState("idle"); // idle|loading|active|done
+  const [questions,  setQuestions]  = useState([]);
+  const [qIdx,       setQIdx]       = useState(0);
+  const [answers,    setAnswers]    = useState([]);
+  const [userInput,  setUserInput]  = useState("");
+  const [jigsawSel,  setJigsawSel]  = useState([]);
+  const [feedback,   setFeedback]   = useState(null); // {correct,text}
+  const [checking,   setChecking]   = useState(false);
+  const [pickingFor, setPickingFor] = useState(null);
+  const [editingFor, setEditingFor] = useState(null);
+  const [editName,   setEditName]   = useState("");
+  const [loading,    setLoading]    = useState(true);
+  const [saveStatus, setSaveStatus] = useState(null);
+
+  const activeProfile = profiles.find(p=>p.id===activeId);
+  const THEMES = activeId ? makeThemes(activeId) : [];
+
+  useEffect(()=>{
+    (async()=>{
+      setLoading(true);
+      try{
+        const {data}=await supabase.from("italian_profiles").select("*");
+        if(data&&data.length>0){
+          const loaded=DEFAULT_PROFILES.map(def=>{
+            const row=data.find(d=>d.id===def.id);
+            return row?{id:row.id,name:row.name,avatar:row.avatar,scores:row.scores||{},total_score:row.total_score||0}:def;
+          });
+          setProfiles(loaded);
+        }
+      }catch(e){console.error(e);}
+      setLoading(false);
+    })();
+  },[]);
+
+  const persist = async(profile)=>{
+    setSaveStatus("saving");
+    try{
+      const{error}=await supabase.from("italian_profiles").upsert({
+        id:profile.id,name:profile.name,avatar:profile.avatar,
+        scores:profile.scores,total_score:profile.total_score||0
+      });
+      setSaveStatus(error?"error":"saved");
+      setTimeout(()=>setSaveStatus(null),2500);
+    }catch{setSaveStatus("error");setTimeout(()=>setSaveStatus(null),2500);}
+  };
+
+  const updateProfile=(id,patch)=>{
+    const next=profiles.map(p=>p.id===id?{...p,...patch}:p);
+    setProfiles(next);
+    persist(next.find(p=>p.id===id));
+    return next;
+  };
+
+  const selectProfile=id=>{setActiveId(id);setScreen("home");};
+
+  const saveScore=(themeId,score,pts)=>{
+    const prof=profiles.find(p=>p.id===activeId);
+    const ns={...prof.scores,[themeId]:Math.max(score,prof.scores[themeId]??0)};
+    const updated={...prof,scores:ns,total_score:(prof.total_score||0)+pts};
+    setProfiles(profiles.map(p=>p.id===activeId?updated:p));
+    persist(updated);
+  };
+
+  const openTheme=t=>{setTheme(t);setLessonIdx(0);setFlipped({});resetQuiz();setScreen("lesson");};
+  const goHome=()=>setScreen("home");
+
+  const resetQuiz=()=>{
+    setQuizState("idle");setQuestions([]);setQIdx(0);
+    setAnswers([]);setUserInput("");setJigsawSel([]);setFeedback(null);
+  };
+
+  const startQuiz=async()=>{
+    setScreen("quiz");resetQuiz();setQuizState("loading");
+    try{
+      const qs=await genQuiz(theme.title,theme.lessons);
+      setQuestions(qs);setQuizState("active");setQIdx(0);
+    }catch(e){
+      console.error(e);setQuizState("error");
+    }
+  };
+
+  const currentQ = questions[qIdx];
+
+  const submitAnswer=async(answer)=>{
+    if(checking)return;
+    const q=currentQ;
+    let correct=false;
+    let feedbackText="";
+
+    if(q.type==="translate"){
+      setChecking(true);
+      try{
+        const res=await checkTranslation(q.fr,q.answer,answer);
+        correct=res.correct;
+        feedbackText=res.feedback;
+      }catch{correct=false;feedbackText="Erreur de vérification";}
+      setChecking(false);
+    } else if(q.type==="jigsaw"){
+      const attempt=answer.join(" ").toLowerCase().trim();
+      const expected=q.answer.toLowerCase().trim();
+      correct=attempt===expected;
+      feedbackText=correct?"Parfait ! ✨":`La bonne réponse : "${q.answer}"`;
+    } else {
+      correct=answer===q.correct;
+      feedbackText=correct?"Bravo ! ✨":`La bonne réponse : "${
+        q.type==="fill_blank"||q.type==="mcq_it"||q.type==="mcq_fr"
+          ? q.options[q.correct]
+          : q.answer
+      }"`;
+    }
+
+    const pts = correct ? (qIdx===4?3:qIdx>=2?2:1) : 0;
+    setAnswers(a=>[...a,{correct,pts,answer}]);
+    setFeedback({correct,text:feedbackText,pts});
+  };
+
+  const nextQuestion=()=>{
+    setFeedback(null);setUserInput("");setJigsawSel([]);
+    if(qIdx+1>=questions.length){
+      const totalPts=answers.reduce((a,x)=>a+x.pts,0)+(feedback?.pts||0);
+      const correctCount=answers.filter(x=>x.correct).length+(feedback?.correct?1:0);
+      saveScore(theme.id,correctCount,totalPts);
+      setQuizState("done");
+    } else {
+      setQIdx(i=>i+1);
+    }
+  };
+
+  const lesson=theme?theme.lessons[lessonIdx]:null;
+
+  // ── LOADING ──
+  if(loading) return(
+    <div style={{fontFamily:"'Nunito',sans-serif",background:"#FFFBF5",minHeight:"100vh",maxWidth:480,margin:"0 auto",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}>
+      <style>{CSS}</style>
+      <div style={{fontSize:52}}>🇮🇹</div>
+      <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:20,color:"#1a1a1a"}}>Ciao Lola !</div>
+      <div style={{width:40,height:40,border:"4px solid #F0EDE8",borderTop:"4px solid #E8622A",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+      <div style={{fontSize:13,color:"#bbb"}}>Chargement…</div>
+    </div>
+  );
+
+  // ── PROFILES ──
+  if(screen==="profiles") return(
+    <div style={{fontFamily:"'Nunito',sans-serif",background:"#FFFBF5",minHeight:"100vh",maxWidth:480,margin:"0 auto"}}>
+      <style>{CSS}</style>
+      <FlagStripe/>
+      <div style={{padding:"22px 18px 8px",textAlign:"center"}}>
+        <div style={{fontSize:44,marginBottom:5}}>🇮🇹</div>
+        <h1 style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:23,color:"#1a1a1a"}}>Ciao Lola !</h1>
+        <p style={{color:"#aaa",fontSize:13,marginTop:5}}>Qui apprend aujourd'hui ?</p>
+        {saveStatus&&<div style={{marginTop:8,fontSize:12,fontWeight:700,color:saveStatus==="saved"?"#22C55E":saveStatus==="error"?"#EF4444":"#aaa"}}>
+          {saveStatus==="saving"?"⏳ Sauvegarde…":saveStatus==="saved"?"✅ Sauvegardé !":"❌ Erreur"}
+        </div>}
+      </div>
+      <div style={{padding:"12px 16px 48px",display:"flex",flexDirection:"column",gap:13}}>
+        {profiles.map((p,pi)=>{
+          const col=P_COLORS[p.id]||"#888";
+          const desc={p1:"11 ans · Douceurs, pizzas & gelato 🍕🍦",p2:"Maman · Art, gastronomie & culture 🎨🍷",p3:"Papa · Histoire, architecture & pratique 🏛️🗺️"}[p.id];
+          return(
+            <div key={p.id} className="pop" style={{animationDelay:`${pi*0.08}s`}}>
+              <div style={{background:"white",borderRadius:22,overflow:"hidden",boxShadow:"0 3px 16px rgba(0,0,0,0.09)",border:`2px solid ${col}22`}}>
+                <div style={{background:`linear-gradient(135deg,${col}16,${col}06)`,padding:"14px 15px 12px",display:"flex",alignItems:"center",gap:12}}>
+                  <div onClick={()=>setPickingFor(p.id)} className="tap" style={{width:54,height:54,borderRadius:16,background:"white",border:`2.5px solid ${col}45`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,cursor:"pointer",flexShrink:0}}>{p.avatar}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    {editingFor===p.id?(
+                      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                        <input autoFocus value={editName} onChange={e=>setEditName(e.target.value)}
+                          onBlur={()=>{if(editName.trim())updateProfile(p.id,{name:editName.trim()});setEditingFor(null);}}
+                          onKeyDown={e=>{if(e.key==="Enter"){if(editName.trim())updateProfile(p.id,{name:editName.trim()});setEditingFor(null);}}}
+                          maxLength={16} style={{flex:1,fontSize:16,fontWeight:800,border:`2px solid ${col}`,borderRadius:10,padding:"4px 9px",outline:"none",color:"#1a1a1a"}}/>
+                        <span style={{cursor:"pointer",fontSize:17}} onClick={()=>{if(editName.trim())updateProfile(p.id,{name:editName.trim()});setEditingFor(null);}}>✓</span>
+                      </div>
+                    ):(
+                      <div style={{display:"flex",alignItems:"center",gap:7}}>
+                        <span style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:17,color:"#1a1a1a"}}>{p.name}</span>
+                        <span className="tap" onClick={()=>{setEditingFor(p.id);setEditName(p.name);}} style={{fontSize:13,cursor:"pointer",opacity:.35}}>✏️</span>
+                      </div>
+                    )}
+                    <div style={{fontSize:11,color:"#aaa",marginTop:2}}>{desc}</div>
+                    <div style={{fontSize:12,marginTop:3,fontWeight:700,color:col}}>🏅 {p.total_score||0} points</div>
+                  </div>
+                  <button onClick={()=>selectProfile(p.id)} style={{background:col,color:"white",border:"none",cursor:"pointer",fontFamily:"'Nunito'",fontWeight:800,fontSize:12,padding:"9px 13px",borderRadius:13,flexShrink:0}}>
+                    {activeId===p.id?"✓ Actif":"Jouer →"}
+                  </button>
+                </div>
+                <div style={{padding:"11px 15px 13px",borderTop:`1px solid ${col}15`}}>
+                  <ProfileProgress scores={p.scores} color={col}/>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {pickingFor&&(
+        <div onClick={()=>setPickingFor(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",zIndex:50,display:"flex",alignItems:"flex-end"}}>
+          <div onClick={e=>e.stopPropagation()} className="fadeUp" style={{background:"white",borderRadius:"22px 22px 0 0",padding:"20px 18px 34px",width:"100%",maxWidth:480,margin:"0 auto"}}>
+            <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:16,marginBottom:15}}>Choisir un avatar</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:9}}>
+              {AVATARS.map(a=>(
+                <div key={a} onClick={()=>{updateProfile(pickingFor,{avatar:a});setPickingFor(null);}} className="tap"
+                  style={{height:48,borderRadius:13,background:"#FFF8F2",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,cursor:"pointer"}}>{a}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // ── HOME ──
+  if(screen==="home"&&activeProfile){
+    const scores=activeProfile.scores;
+    const col=P_COLORS[activeId]||"#E8622A";
+    const done=Object.keys(scores).length;
+    return(
+      <div style={{fontFamily:"'Nunito',sans-serif",background:"#FFFBF5",minHeight:"100vh",maxWidth:480,margin:"0 auto"}}>
+        <style>{CSS}</style>
+        <FlagStripe/>
+        <div style={{background:"white",padding:"10px 15px",display:"flex",alignItems:"center",gap:11,boxShadow:"0 2px 8px rgba(0,0,0,0.07)"}}>
+          <div style={{fontSize:24}}>{activeProfile.avatar}</div>
+          <div style={{flex:1}}>
+            <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:15,color:"#1a1a1a"}}>{activeProfile.name}</div>
+            <div style={{fontSize:11,color:"#bbb"}}>{done}/{THEMES.length} thèmes · <span style={{color:col,fontWeight:700}}>🏅 {activeProfile.total_score||0} pts</span></div>
+          </div>
+          <button onClick={()=>setScreen("profiles")} style={{background:"#F5F0EC",border:"none",cursor:"pointer",fontFamily:"'Nunito'",fontWeight:700,fontSize:12,color:"#888",padding:"6px 12px",borderRadius:11}}>Changer</button>
+        </div>
+        <div style={{padding:"14px 15px 44px"}}>
+          <div style={{textAlign:"center",marginBottom:16}}>
+            <div style={{fontSize:36,marginBottom:3}}>🇮🇹</div>
+            <h1 style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:20,color:"#1a1a1a"}}>Ciao Lola !</h1>
+            <p style={{color:"#bbb",marginTop:3,fontSize:12}}>7 thèmes · Français → Italien</p>
+          </div>
+          <div style={{background:"white",borderRadius:17,padding:"13px 15px",marginBottom:16,boxShadow:"0 2px 12px rgba(0,0,0,0.07)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:8,alignItems:"center"}}>
+              <span style={{fontSize:13,fontWeight:700,color:"#555"}}>Progression de {activeProfile.name}</span>
+              <span style={{fontSize:13,fontWeight:800,color:col}}>{done}/{THEMES.length} thèmes</span>
+            </div>
+            <div style={{height:7,background:"#F0ECE6",borderRadius:4}}>
+              <div style={{height:"100%",width:`${(done/THEMES.length)*100}%`,background:`linear-gradient(90deg,${col},${col}bb)`,borderRadius:4,transition:"width .5s"}}/>
+            </div>
+            <div style={{display:"flex",gap:4,marginTop:10}}>
+              {THEMES.map(t=>{const s=scores[t.id];return(
+                <div key={t.id} style={{flex:1,textAlign:"center"}}>
+                  <div style={{fontSize:14}}>{s!==undefined?scoreEmoji(s):t.emoji}</div>
+                  <div style={{fontSize:8,color:"#ccc",marginTop:1,fontWeight:600}}>{s!==undefined?`${s}/5`:"—"}</div>
+                </div>
+              );})}
+            </div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:11}}>
+            {THEMES.map((t,ti)=>{
+              const sc=scores[t.id];const done2=sc!==undefined;
+              const isBonus=t.id==="bonus";const isNum=t.id==="chiffres";
+              return(
+                <div key={t.id} className="pop" style={{animationDelay:`${ti*0.05}s`}} onClick={()=>openTheme(t)}>
+                  <div style={{background:"white",borderRadius:19,padding:"13px 14px",display:"flex",alignItems:"center",gap:11,boxShadow:"0 2px 12px rgba(0,0,0,0.07)",border:`2px solid ${done2?t.color+"35":isBonus||isNum?t.color+"25":"#F0EDE8"}`,cursor:"pointer"}}>
+                    <div style={{fontSize:30,lineHeight:1,flexShrink:0}}>{t.emoji}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:15,color:"#1a1a1a"}}>{t.title}</div>
+                        {isBonus&&<span style={{fontSize:9,background:t.color,color:"white",padding:"2px 6px",borderRadius:6,fontWeight:700}}>BONUS</span>}
+                        {isNum&&<span style={{fontSize:9,background:"#0277BD",color:"white",padding:"2px 6px",borderRadius:6,fontWeight:700}}>ESSENTIEL</span>}
+                      </div>
+                      <div style={{fontSize:11,color:"#aaa",marginTop:1}}>{t.subtitle}</div>
+                      <div style={{display:"flex",gap:3,marginTop:6}}>
+                        {t.lessons.map((_,i)=><div key={i} style={{height:4,flex:1,borderRadius:2,background:"#F0EDE8"}}/>)}
+                      </div>
+                    </div>
+                    {done2?(<div style={{textAlign:"center",flexShrink:0}}>
+                      <div style={{fontSize:19}}>{scoreEmoji(sc)}</div>
+                      <div style={{fontSize:11,fontWeight:800,color:t.color,marginTop:1}}>{sc}/5</div>
+                    </div>):<div style={{fontSize:19,color:"#D8D0C8",flexShrink:0}}>›</div>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── LESSON ──
+  if(screen==="lesson"&&theme&&lesson){
+    const isFirst=lessonIdx===0;const isLast=lessonIdx===theme.lessons.length-1;
+    return(
+      <div style={{fontFamily:"'Nunito',sans-serif",background:"#FFFBF5",minHeight:"100vh",maxWidth:480,margin:"0 auto",paddingBottom:86}}>
+        <style>{CSS}</style>
+        <FlagStripe/>
+        <div style={{background:"white",padding:"11px 14px",display:"flex",alignItems:"center",gap:9,boxShadow:"0 2px 8px rgba(0,0,0,0.07)",position:"sticky",top:0,zIndex:20}}>
+          <button onClick={goHome} style={{background:"none",border:"none",cursor:"pointer",fontSize:23,color:"#666",padding:"2px 5px",lineHeight:1}}>‹</button>
+          <div style={{fontSize:20}}>{theme.emoji}</div>
+          <div style={{flex:1}}>
+            <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:14,color:"#1a1a1a"}}>{theme.title}</div>
+            <div style={{fontSize:10,color:"#bbb"}}>Leçon {lessonIdx+1}/{theme.lessons.length}</div>
+          </div>
+          <button onClick={startQuiz} style={{background:theme.color,color:"white",border:"none",cursor:"pointer",fontSize:11,fontWeight:800,padding:"6px 11px",borderRadius:15,fontFamily:"'Nunito'",flexShrink:0}}>Quiz →</button>
+        </div>
+        <div style={{display:"flex",gap:6,padding:"10px 18px 0",justifyContent:"center"}}>
+          {theme.lessons.map((_,i)=>(
+            <div key={i} onClick={()=>{setFlipped({});setLessonIdx(i);}} style={{height:6,width:i===lessonIdx?26:6,borderRadius:3,background:i===lessonIdx?theme.color:i<lessonIdx?theme.color+"55":"#E8E3DC",cursor:"pointer",transition:"all .3s"}}/>
+          ))}
+        </div>
+        <div style={{padding:"12px 14px 0"}}>
+          <div style={{marginBottom:12}}>
+            <h2 style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:18,color:"#1a1a1a"}}>{lesson.title}</h2>
+            <p style={{color:"#aaa",fontSize:13,marginTop:3,lineHeight:1.5}}>{lesson.intro}</p>
+          </div>
+          {lesson.type==="phrases"?(
+            <div style={{display:"flex",flexDirection:"column",gap:11}}>
+              {lesson.items.map((item,i)=>{
+                const key=`${lessonIdx}-${i}`;const on=!!flipped[key];
+                return(
+                  <div key={i} className="fc" style={{height:100}} onClick={()=>setFlipped(f=>({...f,[key]:!f[key]}))}>
+                    <div className={`fi${on?" on":""}`} style={{height:"100%"}}>
+                      <div className="ff" style={{background:"white",borderRadius:17,boxShadow:"0 3px 12px rgba(0,0,0,0.08)",border:`2px solid ${theme.color}18`,display:"flex",alignItems:"center",padding:"0 18px",gap:10}}>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:9,color:"#ccc",fontWeight:700,marginBottom:3,letterSpacing:.5}}>🇫🇷 FRANÇAIS · touche pour voir l'italien</div>
+                          <div style={{fontSize:17,fontWeight:800,color:"#1a1a1a",lineHeight:1.3}}>{item.fr}</div>
+                        </div>
+                        <div style={{fontSize:22,opacity:.18}}>🇮🇹</div>
+                      </div>
+                      <div className="ff fb" style={{background:`linear-gradient(135deg,${theme.color}14,${theme.color}07)`,borderRadius:17,border:`2px solid ${theme.color}45`,boxShadow:"0 3px 12px rgba(0,0,0,0.08)",display:"flex",alignItems:"center",padding:"0 18px",gap:10}}>
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:9,color:theme.color,fontWeight:700,marginBottom:3,letterSpacing:.5}}>🇮🇹 ITALIEN</div>
+                          <div style={{fontSize:19,fontWeight:800,color:theme.color,lineHeight:1.3}}>{item.it}</div>
+                          <div style={{fontSize:11,color:"#aaa",marginTop:4}}>📢 {item.pr}</div>
+                        </div>
+                        <div style={{fontSize:20,opacity:.4,color:theme.color}}>✓</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <p style={{textAlign:"center",fontSize:11,color:"#C0B8B0",marginTop:1}}>👆 Touche une carte pour voir la traduction</p>
+            </div>
+          ):(
+            <div>
+              <div style={{background:"white",borderRadius:18,overflow:"hidden",boxShadow:"0 3px 14px rgba(0,0,0,0.08)",border:`2px solid ${theme.color}20`}}>
+                <div style={{background:theme.color,padding:"9px 16px"}}>
+                  <div style={{color:"white",fontSize:10,fontWeight:800,letterSpacing:1,opacity:.85}}>CONJUGAISON / GRAMMAIRE / VOCABULAIRE</div>
+                </div>
+                {lesson.items.map((row,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"flex-start",padding:"10px 14px",background:i%2===0?"white":`${theme.color}07`,borderBottom:i<lesson.items.length-1?`1px solid ${theme.color}12`:"none"}}>
+                    <div style={{width:105,fontSize:12,color:"#aaa",fontWeight:600,paddingTop:2,flexShrink:0}}>{row.fr}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:15,fontWeight:800,color:theme.color}}>{row.it}</div>
+                      <div style={{fontSize:10,color:"#bbb",marginTop:3}}>📢 {row.pr}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {lesson.tip&&(
+                <div style={{background:"#FFFBE6",border:"2px solid #FFE066",borderRadius:14,padding:"11px 14px",marginTop:13}}>
+                  <div style={{fontSize:13,color:"#554400",lineHeight:1.6}}>{lesson.tip}</div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,background:"white",padding:"11px 14px",boxShadow:"0 -4px 16px rgba(0,0,0,0.09)",display:"flex",gap:9}}>
+          <button onClick={()=>{setFlipped({});setLessonIdx(l=>l-1);}} disabled={isFirst} style={{flex:1,padding:"11px 6px",borderRadius:13,border:"2px solid #EEE",background:"white",fontSize:13,fontWeight:700,cursor:isFirst?"not-allowed":"pointer",color:isFirst?"#ddd":"#777",fontFamily:"'Nunito'"}}>← Précédent</button>
+          {isLast
+            ?<button onClick={startQuiz} style={{flex:2,padding:"11px 6px",borderRadius:13,border:"none",background:theme.color,color:"white",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito'"}}>🎯 Faire le quiz !</button>
+            :<button onClick={()=>{setFlipped({});setLessonIdx(l=>l+1);}} style={{flex:2,padding:"11px 6px",borderRadius:13,border:"none",background:theme.color,color:"white",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito'"}}>Suivant →</button>
+          }
+        </div>
+      </div>
+    );
+  }
+
