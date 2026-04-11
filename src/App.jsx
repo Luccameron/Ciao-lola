@@ -1016,3 +1016,291 @@ export default function ItalianApp() {
     );
   }
 
+    // ── QUIZ ──
+  if(screen==="quiz"&&theme){
+    const col=theme.color;
+
+    // LOADING
+    if(quizState==="loading") return(
+      <div style={{fontFamily:"'Nunito',sans-serif",background:"#FFFBF5",minHeight:"100vh",maxWidth:480,margin:"0 auto",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}>
+        <style>{CSS}</style>
+        <FlagStripe/>
+        <div style={{fontSize:44}}>{theme.emoji}</div>
+        <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:18,color:"#1a1a1a"}}>Génération du quiz…</div>
+        <div style={{width:40,height:40,border:`4px solid #F0EDE8`,borderTop:`4px solid ${col}`,borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+        <div style={{fontSize:13,color:"#bbb",textAlign:"center",maxWidth:260}}>Claude prépare des questions personnalisées basées sur tes leçons ✨</div>
+      </div>
+    );
+
+    // ERROR
+    if(quizState==="error") return(
+      <div style={{fontFamily:"'Nunito',sans-serif",background:"#FFFBF5",minHeight:"100vh",maxWidth:480,margin:"0 auto",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,padding:"24px"}}>
+        <style>{CSS}</style>
+        <div style={{fontSize:44}}>😕</div>
+        <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:18,color:"#1a1a1a",textAlign:"center"}}>Erreur de génération</div>
+        <div style={{fontSize:13,color:"#aaa",textAlign:"center"}}>Vérifie ta connexion et réessaie.</div>
+        <button onClick={startQuiz} style={{background:col,color:"white",border:"none",padding:"12px 28px",borderRadius:14,fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito'"}}>🔄 Réessayer</button>
+        <button onClick={()=>setScreen("lesson")} style={{background:"none",border:"none",color:"#aaa",fontSize:13,cursor:"pointer"}}>← Retour aux leçons</button>
+      </div>
+    );
+
+    // DONE
+    if(quizState==="done"){
+      const totalPts=answers.reduce((a,x)=>a+x.pts,0);
+      const correct=answers.filter(x=>x.correct).length;
+      return(
+        <div style={{fontFamily:"'Nunito',sans-serif",background:"#FFFBF5",minHeight:"100vh",maxWidth:480,margin:"0 auto",paddingBottom:100}}>
+          <style>{CSS}</style>
+          <FlagStripe/>
+          <div style={{background:"white",padding:"11px 14px",display:"flex",alignItems:"center",gap:9,boxShadow:"0 2px 8px rgba(0,0,0,0.07)"}}>
+            <div style={{fontSize:20}}>{theme.emoji}</div>
+            <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:14,color:"#1a1a1a",flex:1}}>Résultats — {theme.title}</div>
+          </div>
+          <div style={{padding:"24px 16px",textAlign:"center"}}>
+            <div style={{fontSize:64,marginBottom:8}}>{correct===5?"🏆":correct>=4?"⭐":correct>=3?"👍":"📚"}</div>
+            <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:32,color:"#1a1a1a"}}>{correct}/5</div>
+            <div style={{fontSize:16,color:"#666",marginTop:4,fontWeight:600}}>
+              {correct===5?"Perfetto ! Bravo !":correct>=4?"Molto bene !":correct>=3?"Bene !":"Continua !"}
+            </div>
+            <div style={{background:`${col}15`,border:`2px solid ${col}30`,borderRadius:14,padding:"12px 18px",margin:"16px auto",display:"inline-block"}}>
+              <div style={{fontSize:13,color:"#888"}}>{activeProfile?.avatar} {activeProfile?.name}</div>
+              <div style={{fontSize:22,fontWeight:800,color:col,marginTop:2}}>+{totalPts} points 🏅</div>
+              <div style={{fontSize:12,color:"#aaa",marginTop:2}}>Total : {activeProfile?.total_score||0} pts</div>
+            </div>
+            {saveStatus&&(
+              <div style={{fontSize:12,fontWeight:700,color:saveStatus==="saved"?"#22C55E":"#aaa",marginBottom:8}}>
+                {saveStatus==="saving"?"⏳ Sauvegarde…":"✅ Score sauvegardé !"}
+              </div>
+            )}
+            <div style={{marginTop:20,textAlign:"left"}}>
+              {answers.map((a,i)=>{
+                const q=questions[i];if(!q)return null;
+                return(
+                  <div key={i} style={{background:a.correct?"#F0FFF5":"#FFF5F5",border:`2px solid ${a.correct?"#86EFAC":"#FCA5A5"}`,borderRadius:12,padding:"10px 13px",marginBottom:9}}>
+                    <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                      <div style={{fontSize:16,flexShrink:0}}>{a.correct?"✅":"❌"}</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"#888",marginBottom:2}}>Q{i+1} · {a.pts>0?`+${a.pts} pt${a.pts>1?"s":""}`:""}</div>
+                        <div style={{fontSize:12,fontWeight:700,color:"#333",lineHeight:1.4}}>{q.q}</div>
+                        {!a.correct&&q.type!=="translate"&&(
+                          <div style={{fontSize:11,color:"#555",marginTop:3}}>
+                            Bonne réponse : <span style={{color:"#16A34A",fontWeight:700}}>
+                              {q.type==="jigsaw"?q.answer:q.type==="fill_blank"||q.type==="mcq_it"||q.type==="mcq_fr"?q.options[q.correct]:q.answer}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,background:"white",padding:"11px 14px",boxShadow:"0 -4px 16px rgba(0,0,0,0.09)",display:"flex",gap:9}}>
+            <button onClick={startQuiz} style={{flex:1,padding:"11px",borderRadius:13,border:`2px solid ${col}`,background:"white",color:col,fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito'"}}>🔄 Nouveau quiz</button>
+            <button onClick={goHome} style={{flex:1,padding:"11px",borderRadius:13,border:"none",background:col,color:"white",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito'"}}>🏠 Accueil</button>
+          </div>
+        </div>
+      );
+    }
+
+    // ACTIVE
+    if(quizState==="active"&&currentQ){
+      const q=currentQ;
+      const progress=`${qIdx+1}/5`;
+      const pts=qIdx===4?3:qIdx>=2?2:1;
+
+      const QuestionHeader=()=>(
+        <>
+          <div style={{background:"white",padding:"11px 14px",display:"flex",alignItems:"center",gap:9,boxShadow:"0 2px 8px rgba(0,0,0,0.07)"}}>
+            <button onClick={()=>setScreen("lesson")} style={{background:"none",border:"none",cursor:"pointer",fontSize:23,color:"#666",padding:"2px 5px",lineHeight:1}}>‹</button>
+            <div style={{fontSize:20}}>{theme.emoji}</div>
+            <div style={{flex:1}}>
+              <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:14,color:"#1a1a1a"}}>Quiz — {theme.title}</div>
+              <div style={{fontSize:10,color:"#bbb"}}>Question {progress} · {pts} pt{pts>1?"s":""}</div>
+            </div>
+          </div>
+          <div style={{padding:"10px 16px 0"}}>
+            <div style={{height:6,background:"#F0EDE8",borderRadius:3}}>
+              <div style={{height:"100%",width:`${(qIdx/5)*100}%`,background:col,borderRadius:3,transition:"width .3s"}}/>
+            </div>
+          </div>
+        </>
+      );
+
+      const FeedbackBar=()=>feedback?(
+        <div style={{margin:"14px 16px 0",padding:"12px 15px",borderRadius:14,background:feedback.correct?"#F0FFF5":"#FFF5F5",border:`2px solid ${feedback.correct?"#86EFAC":"#FCA5A5"}`}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{fontSize:20}}>{feedback.correct?"✅":"❌"}</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:14,fontWeight:700,color:feedback.correct?"#16A34A":"#DC2626"}}>{feedback.text}</div>
+              {feedback.correct&&<div style={{fontSize:12,color:"#aaa",marginTop:2}}>+{feedback.pts} point{feedback.pts>1?"s":""} 🏅</div>}
+            </div>
+          </div>
+          <button onClick={nextQuestion} style={{width:"100%",marginTop:12,padding:"11px",borderRadius:12,border:"none",background:col,color:"white",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito'"}}>
+            {qIdx+1>=questions.length?"Voir les résultats →":"Question suivante →"}
+          </button>
+        </div>
+      ):null;
+
+      // MCQ (IT ou FR)
+      if(q.type==="mcq_it"||q.type==="mcq_fr"){
+        const shuffled=q.options;
+        return(
+          <div style={{fontFamily:"'Nunito',sans-serif",background:"#FFFBF5",minHeight:"100vh",maxWidth:480,margin:"0 auto",paddingBottom:40}}>
+            <style>{CSS}</style>
+            <FlagStripe/>
+            <QuestionHeader/>
+            <div style={{padding:"16px 16px 0"}}>
+              <div style={{background:"white",borderRadius:18,padding:"18px",boxShadow:"0 3px 12px rgba(0,0,0,0.08)",marginBottom:16,border:`2px solid ${col}20`}}>
+                <div style={{fontSize:10,color:col,fontWeight:800,letterSpacing:1,marginBottom:8}}>
+                  {q.type==="mcq_it"?"🇫🇷 → 🇮🇹  TRADUIS EN ITALIEN":"🇮🇹 → 🇫🇷  QUE SIGNIFIE CE MOT ?"}
+                </div>
+                <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:22,color:"#1a1a1a"}}>{q.type==="mcq_it"?q.fr:q.it}</div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:9}}>
+                {shuffled.map((opt,oi)=>{
+                  const chosen=feedback&&answers[qIdx]?.answer===oi;
+                  const isCorrect=oi===q.correct;
+                  const bg=feedback?(isCorrect?"#F0FFF5":chosen?"#FFF5F5":"white"):"white";
+                  const border=feedback?(isCorrect?"#86EFAC":chosen?"#FCA5A5":"#EEE"):(!feedback&&"#EEE");
+                  return(
+                    <button key={oi} className="opt" disabled={!!feedback}
+                      onClick={()=>!feedback&&submitAnswer(oi)}
+                      style={{padding:"12px 14px",borderRadius:13,textAlign:"left",border:`2px solid ${border}`,background:bg,fontSize:14,fontWeight:600,color:"#555",fontFamily:"'Nunito'",cursor:feedback?"default":"pointer"}}>
+                      <span style={{fontSize:10,color:"#ccc",marginRight:6,fontWeight:700}}>{String.fromCharCode(65+oi)}.</span>{opt}
+                      {feedback&&isCorrect&&<span style={{float:"right"}}>✅</span>}
+                      {feedback&&chosen&&!isCorrect&&<span style={{float:"right"}}>❌</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <FeedbackBar/>
+          </div>
+        );
+      }
+
+      // FILL BLANK
+      if(q.type==="fill_blank"){
+        return(
+          <div style={{fontFamily:"'Nunito',sans-serif",background:"#FFFBF5",minHeight:"100vh",maxWidth:480,margin:"0 auto",paddingBottom:40}}>
+            <style>{CSS}</style>
+            <FlagStripe/>
+            <QuestionHeader/>
+            <div style={{padding:"16px 16px 0"}}>
+              <div style={{background:"white",borderRadius:18,padding:"18px",boxShadow:"0 3px 12px rgba(0,0,0,0.08)",marginBottom:16,border:`2px solid ${col}20`}}>
+                <div style={{fontSize:10,color:col,fontWeight:800,letterSpacing:1,marginBottom:10}}>🇮🇹 COMPLÈTE LA PHRASE</div>
+                <div style={{fontFamily:"'Baloo 2'",fontWeight:700,fontSize:18,color:"#1a1a1a",lineHeight:1.6}}>
+                  {q.before} <span style={{background:`${col}20`,border:`2px dashed ${col}`,borderRadius:8,padding:"2px 14px",color:col}}>?</span> {q.after}
+                </div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:9}}>
+                {q.options.map((opt,oi)=>{
+                  const chosen=feedback&&answers[qIdx]?.answer===oi;
+                  const isCorrect=oi===q.correct;
+                  const bg=feedback?(isCorrect?"#F0FFF5":chosen?"#FFF5F5":"white"):"white";
+                  const border=feedback?(isCorrect?"#86EFAC":chosen?"#FCA5A5":"#EEE"):"#EEE";
+                  return(
+                    <button key={oi} className="opt" disabled={!!feedback}
+                      onClick={()=>!feedback&&submitAnswer(oi)}
+                      style={{padding:"12px 14px",borderRadius:13,textAlign:"left",border:`2px solid ${border}`,background:bg,fontSize:15,fontWeight:700,color:col,fontFamily:"'Nunito'",cursor:feedback?"default":"pointer"}}>
+                      {opt}
+                      {feedback&&isCorrect&&<span style={{float:"right"}}>✅</span>}
+                      {feedback&&chosen&&!isCorrect&&<span style={{float:"right"}}>❌</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <FeedbackBar/>
+          </div>
+        );
+      }
+
+      // JIGSAW
+      if(q.type==="jigsaw"){
+        const remaining=q.words.filter(w=>!jigsawSel.includes(w));
+        return(
+          <div style={{fontFamily:"'Nunito',sans-serif",background:"#FFFBF5",minHeight:"100vh",maxWidth:480,margin:"0 auto",paddingBottom:40}}>
+            <style>{CSS}</style>
+            <FlagStripe/>
+            <QuestionHeader/>
+            <div style={{padding:"16px 16px 0"}}>
+              <div style={{background:"white",borderRadius:18,padding:"18px",boxShadow:"0 3px 12px rgba(0,0,0,0.08)",marginBottom:16,border:`2px solid ${col}20`}}>
+                <div style={{fontSize:10,color:col,fontWeight:800,letterSpacing:1,marginBottom:8}}>🧩 REMETS DANS L'ORDRE</div>
+                <div style={{minHeight:44,background:`${col}08`,borderRadius:12,padding:"10px 12px",display:"flex",flexWrap:"wrap",gap:6,alignItems:"center"}}>
+                  {jigsawSel.length===0&&<span style={{color:"#ccc",fontSize:13}}>Touche les mots ci-dessous…</span>}
+                  {jigsawSel.map((w,i)=>(
+                    <span key={i} onClick={()=>!feedback&&setJigsawSel(s=>s.filter((_,j)=>j!==i))}
+                      style={{background:col,color:"white",borderRadius:8,padding:"4px 10px",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+                      {w}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16}}>
+                {remaining.map((w,i)=>(
+                  <span key={i} onClick={()=>!feedback&&setJigsawSel(s=>[...s,w])}
+                    style={{background:"white",border:`2px solid ${col}40`,borderRadius:10,padding:"7px 12px",fontSize:14,fontWeight:700,color:col,cursor:"pointer"}}>
+                    {w}
+                  </span>
+                ))}
+              </div>
+              {!feedback&&jigsawSel.length===q.words.length&&(
+                <button onClick={()=>submitAnswer(jigsawSel)}
+                  style={{width:"100%",padding:"13px",borderRadius:13,border:"none",background:col,color:"white",fontSize:15,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito'"}}>
+                  ✓ Valider
+                </button>
+              )}
+              {!feedback&&jigsawSel.length>0&&jigsawSel.length<q.words.length&&(
+                <button onClick={()=>setJigsawSel([])}
+                  style={{width:"100%",padding:"10px",borderRadius:13,border:`2px solid #EEE`,background:"white",color:"#aaa",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito'"}}>
+                  🔄 Recommencer
+                </button>
+              )}
+            </div>
+            <FeedbackBar/>
+          </div>
+        );
+      }
+
+      // TRANSLATE
+      if(q.type==="translate"){
+        return(
+          <div style={{fontFamily:"'Nunito',sans-serif",background:"#FFFBF5",minHeight:"100vh",maxWidth:480,margin:"0 auto",paddingBottom:40}}>
+            <style>{CSS}</style>
+            <FlagStripe/>
+            <QuestionHeader/>
+            <div style={{padding:"16px 16px 0"}}>
+              <div style={{background:"white",borderRadius:18,padding:"18px",boxShadow:"0 3px 12px rgba(0,0,0,0.08)",marginBottom:16,border:`2px solid ${col}20`}}>
+                <div style={{fontSize:10,color:col,fontWeight:800,letterSpacing:1,marginBottom:8}}>🇫🇷 → 🇮🇹  TRADUIS TOUTE LA PHRASE</div>
+                <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:20,color:"#1a1a1a",lineHeight:1.4}}>{q.fr}</div>
+                {q.hint&&<div style={{fontSize:12,color:"#aaa",marginTop:8,lineHeight:1.5}}>{q.hint}</div>}
+              </div>
+              <textarea
+                value={userInput}
+                onChange={e=>setUserInput(e.target.value)}
+                disabled={!!feedback||checking}
+                placeholder="Écris ta traduction ici…"
+                rows={3}
+                style={{width:"100%",padding:"13px",borderRadius:13,border:`2px solid ${col}40`,fontSize:16,fontWeight:600,color:"#1a1a1a",resize:"none",outline:"none",background:"white",fontFamily:"'Nunito'"}}
+              />
+              {!feedback&&(
+                <button onClick={()=>userInput.trim()&&submitAnswer(userInput.trim())}
+                  disabled={!userInput.trim()||checking}
+                  style={{width:"100%",marginTop:10,padding:"13px",borderRadius:13,border:"none",background:userInput.trim()&&!checking?col:"#DDD",color:"white",fontSize:15,fontWeight:800,cursor:userInput.trim()&&!checking?"pointer":"not-allowed",fontFamily:"'Nunito'"}}>
+                  {checking?<span style={{animation:"pulse 1s infinite"}}>⏳ Claude vérifie…</span>:"✓ Valider ma réponse"}
+                </button>
+              )}
+            </div>
+            <FeedbackBar/>
+          </div>
+        );
+      }
+    }
+  }
+
+  return null;
+}
+
