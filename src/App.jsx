@@ -534,7 +534,7 @@ const DEFAULT_PROFILES = [
 ];
 const AVATARS = ["🎀","🌸","🗺️","🦁","🐯","🐻","🦊","🦄","🎨","🍕","🌟","✈️"];
 const P_COLORS = { p1:"#E8622A", p2:"#C41E3A", p3:"#1B6BBE" };
-const AKEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
+const AKEY = import.meta.env.VITE_ANTHROPIC_API_KEY; 
 
 const claude = async (content, maxTokens=1500) => {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
