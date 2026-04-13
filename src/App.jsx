@@ -796,8 +796,15 @@ export default function ItalianApp() {
   const [pickingFor, setPickingFor] = useState(null);
   const [editingFor, setEditingFor] = useState(null);
   const [editName,   setEditName]   = useState("");
-  const [loading,    setLoading]    = useState(true);
-  const [saveStatus, setSaveStatus] = useState(null);
+  const [loading,      setLoading]      = useState(true);
+  const [saveStatus,   setSaveStatus]   = useState(null);
+  const [scenario,     setScenario]     = useState(null);
+  const [scenarioHist, setScenarioHist] = useState([]);
+  const [scenarioMsg,  setScenarioMsg]  = useState("");
+  const [scenarioPts,  setScenarioPts]  = useState(0);
+  const [scenarioDone, setScenarioDone] = useState([]);
+  const [scenarioEnd,  setScenarioEnd]  = useState(false);
+  const [scenarioLoad, setScenarioLoad] = useState(false);
 
   const activeProfile = profiles.find(p=>p.id===activeId);
   const THEMES = activeId ? makeThemes(activeId) : [];
