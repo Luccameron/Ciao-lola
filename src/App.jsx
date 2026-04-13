@@ -586,13 +586,23 @@ JSON strict sans markdown:
 };
 
 const checkTranslation = async (fr, answer, input) => {
+  const normalize = s => s.toLowerCase()
+    .replace(/[.,!?;:'"«»\-]/g,"")
+    .replace(/\s+/g," ").trim();
+  if(normalize(input)===normalize(answer)){
+    return {correct:true, feedback:"Perfetto ! ✨"};
+  }
   const prompt = `Contexte: cours d'italien débutant.
 Phrase française: "${fr}"
-Traduction correcte attendue: "${answer}"
+Traduction de référence: "${answer}"
 Réponse de l'élève: "${input}"
-Évalue si c'est correct. Sois indulgent sur les accents manquants et petites fautes de frappe.
-Retourne UNIQUEMENT ce JSON: {"correct":true,"feedback":"message encourageant"} ou {"correct":false,"feedback":"correction courte"}`;
-  const txt = await claude(prompt, 200);
+Règles d'évaluation:
+- Ignore totalement la ponctuation et les majuscules
+- Accepte les variantes correctes même si différentes de la référence
+- Accepte les fautes d'accent mineures (e au lieu de è, etc.)
+- Refuse uniquement les vraies erreurs grammaticales ou de vocabulaire
+Retourne UNIQUEMENT ce JSON: {"correct":true,"feedback":"message court encourageant"} ou {"correct":false,"feedback":"correction courte: [bonne réponse]"}`;
+  const txt = await claude(prompt, 150);
   return JSON.parse(txt);
 };
 
