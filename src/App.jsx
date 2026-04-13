@@ -556,21 +556,30 @@ const claude = async (content, maxTokens=1500) => {
 };
 
 const genQuiz = async (title, lessons) => {
-  const items = lessons.flatMap(l=>l.items||[]).slice(0,15);
-  const vocab = items.map((i,n)=>`${n+1}. FR:"${i.fr}" IT:"${i.it}"`).join("\n");
-  const prompt = `Quiz d'italien pour débutants. Thème:"${title}"\nVocabulaire de la leçon:\n${vocab}
-
-Génère 5 questions de difficulté STRICTEMENT croissante basées sur ce vocabulaire.
-Retourne UNIQUEMENT du JSON valide, sans aucun markdown:
-{
-  "questions":[
-    {"type":"mcq_it","q":"Comment dit-on [mot FR] en italien ?","fr":"mot FR exact","options":["traduction IT correcte","mauvais1","mauvais2","mauvais3"],"correct":0},
-    {"type":"mcq_fr","q":"Que signifie [mot IT] en français ?","it":"mot IT exact","options":["traduction FR correcte","mauvais1","mauvais2","mauvais3"],"correct":0},
-    {"type":"fill_blank","q":"Complète la phrase italienne :","before":"début de phrase IT","blank":"MOT_MANQUANT","after":"fin de phrase IT","options":["MOT_MANQUANT","mauvais1","mauvais2","mauvais3"],"correct":0},
-    {"type":"jigsaw","q":"Remets ces mots italiens dans le bon ordre :","words":["mot1","mot2","mot3","mot4","mot5"],"answer":"mot1 mot2 mot3 mot4 mot5"},
-    {"type":"translate","q":"Traduis cette phrase entière en italien :","fr":"phrase française complète","answer":"traduction italienne complète","hint":"💡 indice grammatical utile"}
-  ]
-}`;
+  const phrases = lessons.filter(l=>l.type==="phrases").flatMap(l=>l.items||[]).slice(0,15);
+  const grammar = lessons.filter(l=>l.type==="grammar").flatMap(l=>l.items||[]).slice(0,6);
+  const vocab = phrases.map((i,n)=>`${n+1}. FR:"${i.fr}" IT:"${i.it}"`).join("\n");
+  const verbs = grammar.map(i=>`FR:"${i.fr}" IT:"${i.it}"`).join("\n");
+  const prompt = `Quiz d'italien pour débutants francophones. Thème: "${title}"
+VOCABULAIRE:\n${vocab}\n${verbs?`VERBES:\n${verbs}\n`:""}
+Génère EXACTEMENT 7 questions de difficulté STRICTEMENT croissante.
+- Q1: QCM simple - reconnaître un mot isolé
+- Q2: QCM - mot utilisé dans une phrase courte avec contexte
+- Q3: QCM - choisir la phrase italienne correcte parmi 4 options
+- Q4: texte à trous dans une phrase complète avec contexte
+- Q5: puzzle de mots - OBLIGATOIRE: les "words" doivent être dans un ordre COMPLÈTEMENT DIFFÉRENT de "answer". Ex: answer="Buongiorno come stai" → words=["stai","come","Buongiorno"]. JAMAIS dans l'ordre!
+- Q6: traduction d'une phrase complète avec contexte de situation
+- Q7: conjugaison d'un verbe dans une phrase (difficile)
+JSON strict sans markdown:
+{"questions":[
+{"type":"mcq_it","q":"Comment dit-on [mot] en italien ?","fr":"mot FR","options":["IT correct","faux1","faux2","faux3"],"correct":0},
+{"type":"mcq_context","q":"Pour dire [situation], on dit :","context_fr":"traduction FR","options":["phrase IT correcte","fausse1","fausse2","fausse3"],"correct":0},
+{"type":"mcq_context","q":"Laquelle est correcte pour [situation] ?","context_fr":"explication","options":["correcte","fausse1","fausse2","fausse3"],"correct":0},
+{"type":"fill_blank","q":"Complète la phrase :","before":"début IT","blank":"MOT","after":"fin IT","hint_fr":"traduction FR complète","options":["MOT correct","faux1","faux2","faux3"],"correct":0},
+{"type":"jigsaw","q":"Remets ces mots dans le bon ordre :","words":["mot4","mot1","mot3","mot5","mot2"],"answer":"mot1 mot2 mot3 mot4 mot5","hint_fr":"traduction FR"},
+{"type":"translate","q":"Traduis cette phrase complète en italien :","fr":"phrase FR avec contexte de situation","answer":"phrase IT","hint":"💡 indice grammatical utile"},
+{"type":"verb_conjugation","q":"Complète avec la bonne forme du verbe :","sentence_fr":"phrase FR","before_it":"début IT sans le verbe","verb_infinitive_it":"infinitif IT","person_fr":"personne","answer":"phrase IT complète","hint":"💡 [forme correcte]"}
+]}`;
   const txt = await claude(prompt);
   const parsed = JSON.parse(txt);
   return parsed.questions;
