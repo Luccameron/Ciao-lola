@@ -1461,6 +1461,266 @@ export default function ItalianApp() {
     }
   }
 
+// ── SCENARIOS LIST ──
+  if(screen==="scenarios"){
+    const available = SCENARIOS.filter(s=>s.profile==="all"||s.profile===activeId);
+    return(
+      <div style={{fontFamily:"'Nunito',sans-serif",background:"#0f0f1a",minHeight:"100vh",maxWidth:480,margin:"0 auto",paddingBottom:40}}>
+        <style>{CSS}</style>
+        <FlagStripe/>
+        <div style={{background:"rgba(255,255,255,0.05)",padding:"11px 14px",display:"flex",alignItems:"center",gap:9}}>
+          <button onClick={goHome} style={{background:"none",border:"none",cursor:"pointer",fontSize:23,color:"rgba(255,255,255,0.6)",padding:"2px 5px",lineHeight:1}}>‹</button>
+          <div style={{flex:1}}>
+            <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:16,color:"white"}}>🎭 Scénarios</div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>Conversations en situation réelle</div>
+          </div>
+          <div style={{fontSize:12,fontWeight:700,color:"#E8622A"}}>🏅 {activeProfile?.total_score||0} pts</div>
+        </div>
+        <div style={{padding:"16px 14px",display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{fontSize:13,color:"rgba(255,255,255,0.5)",lineHeight:1.5,marginBottom:4}}>
+            Joue le rôle d'un voyageur en Italie. Claude joue l'interlocuteur. Utilise les mots appris pour gagner des points !
+          </div>
+          {available.map((sc,i)=>(
+            <div key={sc.id} className="pop" style={{animationDelay:`${i*0.07}s`}}
+              onClick={()=>{
+                setScenario(sc);
+                setScenarioHist([]);
+                setScenarioPts(0);
+                setScenarioDone([]);
+                setScenarioEnd(false);
+                setScenarioMsg("");
+                setScreen("scenario_play");
+              }}>
+              <div style={{background:"rgba(255,255,255,0.05)",border:`2px solid ${sc.color}40`,borderRadius:18,padding:"15px 15px",display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}>
+                <div style={{fontSize:34,lineHeight:1,flexShrink:0}}>{sc.emoji}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:15,color:"white"}}>{sc.title}</div>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",marginTop:2,lineHeight:1.4}}>{sc.objective}</div>
+                  <div style={{display:"flex",gap:3,marginTop:7,flexWrap:"wrap"}}>
+                    {sc.targets.map((t,ti)=>(
+                      <span key={ti} style={{fontSize:9,background:`${sc.color}25`,color:sc.color,padding:"2px 6px",borderRadius:5,fontWeight:700}}>
+                        +{t.pts}pt
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div style={{textAlign:"center",flexShrink:0}}>
+                  <div style={{fontSize:13,fontWeight:800,color:sc.color}}>{sc.targets.reduce((a,t)=>a+t.pts,0)} pts</div>
+                  <div style={{fontSize:9,color:"rgba(255,255,255,0.3)"}}>max</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── SCENARIO PLAY ──
+  if(screen==="scenario_play"&&scenario){
+    const col=scenario.color;
+    const maxPts=scenario.targets.reduce((a,t)=>a+t.pts,0);
+    const pct=Math.round((scenarioPts/maxPts)*100);
+
+    const sendMessage = async()=>{
+      if(!scenarioMsg.trim()||scenarioLoad)return;
+      const userMsg=scenarioMsg.trim();
+      setScenarioMsg("");
+      const newHist=[...scenarioHist,{role:"user",content:userMsg}];
+      setScenarioHist(newHist);
+      setScenarioLoad(true);
+
+      // Check targets
+      const lower=userMsg.toLowerCase();
+      let ptsEarned=0;
+      const newDone=[...scenarioDone];
+      scenario.targets.forEach(t=>{
+        if(!newDone.includes(t.phrase)&&lower.includes(t.phrase.toLowerCase())){
+          newDone.push(t.phrase);
+          ptsEarned+=t.pts;
+        }
+      });
+      if(ptsEarned>0){
+        setScenarioDone(newDone);
+        setScenarioPts(p=>p+ptsEarned);
+      }
+
+      try{
+        // Check if scenario should end
+        const isEnding=lower.includes("arrivederci")||lower.includes("grazie mille")||lower.includes("ciao")||newHist.length>16;
+        const systemPrompt = isEnding
+          ? scenario.system+"\n\nL'utilisateur semble terminer la conversation. Conclus naturellement."
+          : scenario.system;
+
+        const reply=await checkScenario(systemPrompt, newHist);
+        const updatedHist=[...newHist,{role:"assistant",content:reply}];
+        setScenarioHist(updatedHist);
+
+        if(isEnding||newHist.length>16){
+          setScenarioEnd(true);
+          // Save points
+          const prof=profiles.find(p=>p.id===activeId);
+          const updated={...prof,total_score:(prof.total_score||0)+scenarioPts+(ptsEarned)};
+          setProfiles(profiles.map(p=>p.id===activeId?updated:p));
+          persist(updated);
+        }
+      }catch(e){
+        console.error(e);
+        setScenarioHist(h=>[...h,{role:"assistant",content:"(Erreur de connexion — réessaie)"}]);
+      }
+      setScenarioLoad(false);
+    };
+
+    // Start conversation
+    const startConv=async()=>{
+      if(scenarioHist.length>0)return;
+      setScenarioLoad(true);
+      try{
+        const reply=await checkScenario(scenario.system,[{role:"user",content:"[START]"}]);
+        setScenarioHist([{role:"assistant",content:reply}]);
+      }catch(e){
+        setScenarioHist([{role:"assistant",content:"(Erreur — vérifie ta connexion)"}]);
+      }
+      setScenarioLoad(false);
+    };
+
+    // Auto-start
+    if(scenarioHist.length===0&&!scenarioLoad){
+      startConv();
+    }
+
+    return(
+      <div style={{fontFamily:"'Nunito',sans-serif",background:"#0f0f1a",minHeight:"100vh",maxWidth:480,margin:"0 auto",display:"flex",flexDirection:"column"}}>
+        <style>{CSS}</style>
+        <FlagStripe/>
+
+        {/* Header */}
+        <div style={{background:"rgba(255,255,255,0.05)",padding:"10px 14px",display:"flex",alignItems:"center",gap:9,flexShrink:0}}>
+          <button onClick={()=>setScreen("scenarios")} style={{background:"none",border:"none",cursor:"pointer",fontSize:23,color:"rgba(255,255,255,0.6)",padding:"2px 5px",lineHeight:1}}>‹</button>
+          <div style={{fontSize:18}}>{scenario.emoji}</div>
+          <div style={{flex:1}}>
+            <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:13,color:"white"}}>{scenario.title}</div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,0.4)"}}>{scenario.objective}</div>
+          </div>
+          <div style={{textAlign:"right",flexShrink:0}}>
+            <div style={{fontSize:14,fontWeight:800,color:col}}>{scenarioPts}/{maxPts} pts</div>
+            <div style={{fontSize:9,color:"rgba(255,255,255,0.3)"}}>{pct}%</div>
+          </div>
+        </div>
+
+        {/* Progress targets */}
+        <div style={{padding:"8px 14px",background:"rgba(255,255,255,0.03)",flexShrink:0}}>
+          <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+            {scenario.targets.map((t,i)=>(
+              <span key={i} style={{fontSize:10,padding:"3px 8px",borderRadius:8,fontWeight:700,
+                background:scenarioDone.includes(t.phrase)?`${col}30`:"rgba(255,255,255,0.05)",
+                color:scenarioDone.includes(t.phrase)?col:"rgba(255,255,255,0.25)",
+                border:`1px solid ${scenarioDone.includes(t.phrase)?col:"rgba(255,255,255,0.1)"}`,
+                textDecoration:scenarioDone.includes(t.phrase)?"line-through":"none"
+              }}>
+                {scenarioDone.includes(t.phrase)?"✓ ":""}{t.phrase}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Chat */}
+        <div style={{flex:1,overflowY:"auto",padding:"12px 14px",display:"flex",flexDirection:"column",gap:10}}>
+          {/* Context bubble */}
+          <div style={{background:`${col}15`,border:`1px solid ${col}30`,borderRadius:12,padding:"10px 13px",marginBottom:4}}>
+            <div style={{fontSize:10,color:col,fontWeight:700,marginBottom:3}}>📍 CONTEXTE</div>
+            <div style={{fontSize:12,color:"rgba(255,255,255,0.7)",lineHeight:1.5}}>{scenario.context}</div>
+          </div>
+
+          {scenarioHist.length===0&&scenarioLoad&&(
+            <div style={{textAlign:"center",padding:"20px",color:"rgba(255,255,255,0.3)",fontSize:13}}>
+              <div style={{width:24,height:24,border:"3px solid rgba(255,255,255,0.1)",borderTop:`3px solid ${col}`,borderRadius:"50%",animation:"spin 0.8s linear infinite",margin:"0 auto 8px"}}/>
+              Connexion en cours…
+            </div>
+          )}
+
+          {scenarioHist.map((msg,i)=>(
+            <div key={i} style={{display:"flex",justifyContent:msg.role==="user"?"flex-end":"flex-start"}}>
+              <div style={{
+                maxWidth:"82%",padding:"10px 13px",borderRadius:msg.role==="user"?"16px 16px 4px 16px":"16px 16px 16px 4px",
+                background:msg.role==="user"?`linear-gradient(135deg,${col},${col}cc)`:"rgba(255,255,255,0.08)",
+                color:"white",fontSize:14,lineHeight:1.5,fontWeight:msg.role==="user"?600:400
+              }}>
+                {msg.role==="assistant"&&<div style={{fontSize:9,color:col,fontWeight:700,marginBottom:4}}>🇮🇹 ITALIANO</div>}
+                {msg.content}
+              </div>
+            </div>
+          ))}
+
+          {scenarioLoad&&scenarioHist.length>0&&(
+            <div style={{display:"flex",justifyContent:"flex-start"}}>
+              <div style={{background:"rgba(255,255,255,0.08)",borderRadius:"16px 16px 16px 4px",padding:"10px 16px"}}>
+                <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                  {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:col,animation:`pulse 1s ${i*0.2}s infinite`}}/>)}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {scenarioEnd&&(
+            <div style={{background:"linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))",border:`2px solid ${col}50`,borderRadius:16,padding:"16px",textAlign:"center",marginTop:8}}>
+              <div style={{fontSize:36,marginBottom:8}}>{pct>=80?"🏆":pct>=50?"⭐":"👍"}</div>
+              <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:22,color:"white"}}>{scenarioPts}/{maxPts} points</div>
+              <div style={{fontSize:13,color:"rgba(255,255,255,0.6)",marginTop:4}}>
+                {pct>=80?"Perfetto ! Tu parles comme un vrai Italien !":pct>=50?"Molto bene ! Continue à pratiquer !":"Bene ! Réessaie pour améliorer ton score !"}
+              </div>
+              <div style={{marginTop:12,display:"flex",gap:8}}>
+                <button onClick={()=>{setScenarioHist([]);setScenarioPts(0);setScenarioDone([]);setScenarioEnd(false);setScenarioMsg("");}}
+                  style={{flex:1,padding:"10px",borderRadius:12,border:`2px solid ${col}`,background:"transparent",color:col,fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito'"}}>
+                  🔄 Rejouer
+                </button>
+                <button onClick={()=>setScreen("scenarios")}
+                  style={{flex:1,padding:"10px",borderRadius:12,border:"none",background:col,color:"white",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"'Nunito'"}}>
+                  ← Scénarios
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Hints */}
+        {!scenarioEnd&&(
+          <div style={{padding:"6px 14px",flexShrink:0}}>
+            <div style={{display:"flex",gap:5,overflowX:"auto",paddingBottom:2}}>
+              {scenario.targets.filter(t=>!scenarioDone.includes(t.phrase)).slice(0,3).map((t,i)=>(
+                <button key={i} onClick={()=>setScenarioMsg(m=>m+" "+t.phrase)}
+                  style={{flexShrink:0,fontSize:11,padding:"5px 10px",borderRadius:9,border:`1px solid ${col}40`,background:`${col}10`,color:col,cursor:"pointer",fontFamily:"'Nunito'",fontWeight:700}}>
+                  💡 {t.hint}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Input */}
+        {!scenarioEnd&&(
+          <div style={{padding:"10px 14px 20px",flexShrink:0,background:"rgba(0,0,0,0.3)"}}>
+            <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+              <textarea
+                value={scenarioMsg}
+                onChange={e=>setScenarioMsg(e.target.value)}
+                onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage();}}}
+                placeholder="Scrivi in italiano… (écris en italien)"
+                disabled={scenarioLoad}
+                rows={2}
+                style={{flex:1,padding:"10px 13px",borderRadius:13,border:`2px solid ${col}40`,background:"rgba(255,255,255,0.06)",color:"white",fontSize:14,resize:"none",outline:"none",fontFamily:"'Nunito'"}}
+              />
+              <button onClick={sendMessage} disabled={!scenarioMsg.trim()||scenarioLoad}
+                style={{width:46,height:46,borderRadius:13,border:"none",background:scenarioMsg.trim()&&!scenarioLoad?col:"rgba(255,255,255,0.1)",color:"white",fontSize:20,cursor:scenarioMsg.trim()&&!scenarioLoad?"pointer":"default",flexShrink:0}}>
+                ➤
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return null;
 }
 
