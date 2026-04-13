@@ -1041,6 +1041,19 @@ export default function ItalianApp() {
               );})}
             </div>
           </div>
+          {/* Bouton Scénarios */}
+          <div onClick={()=>setScreen("scenarios")} style={{background:"linear-gradient(135deg,#1a1a2e,#16213e)",borderRadius:19,padding:"15px 16px",display:"flex",alignItems:"center",gap:12,boxShadow:"0 4px 16px rgba(0,0,0,0.2)",cursor:"pointer",marginBottom:4}}>
+            <div style={{fontSize:32}}>🎭</div>
+            <div style={{flex:1}}>
+              <div style={{display:"flex",alignItems:"center",gap:7}}>
+                <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:15,color:"white"}}>Scénarios</div>
+                <span style={{fontSize:9,background:"#E8622A",color:"white",padding:"2px 7px",borderRadius:6,fontWeight:700}}>NOUVEAU</span>
+              </div>
+              <div style={{fontSize:11,color:"rgba(255,255,255,0.6)",marginTop:1}}>Conversations réelles avec un Italien</div>
+              <div style={{fontSize:10,color:"rgba(255,255,255,0.4)",marginTop:4}}>Bar · Gare · Musée · Hôtel · Gelateria</div>
+            </div>
+            <div style={{fontSize:19,color:"rgba(255,255,255,0.4)"}}>›</div>
+          </div>
           <div style={{display:"flex",flexDirection:"column",gap:11}}>
             {THEMES.map((t,ti)=>{
               const sc=scores[t.id];const done2=sc!==undefined;
