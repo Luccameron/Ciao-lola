@@ -527,6 +527,127 @@ const makeThemes = (pid) => {
     NUMBERS_THEME,
   ];
 };
+const SCENARIOS = [
+  {
+    id:"sc_bar", emoji:"☕", title:"Au bar à Florence",
+    profile:"all",
+    color:"#E8622A",
+    objective:"Commander un café et un cornetto, demander le prix, dire merci et au revoir.",
+    context:"Tu entres dans un bar italien à Florence le matin. Le barista t'accueille.",
+    targets:[
+      {phrase:"buongiorno", pts:1, hint:"Commence par saluer !"},
+      {phrase:"caffè", pts:1, hint:"Commande ton café"},
+      {phrase:"cornetto", pts:1, hint:"Et un croissant ?"},
+      {phrase:"per favore", pts:1, hint:"Sois poli(e) !"},
+      {phrase:"quanto costa", pts:2, hint:"Demande le prix"},
+      {phrase:"grazie", pts:1, hint:"Remercie"},
+      {phrase:"arrivederci", pts:1, hint:"Dis au revoir"},
+    ],
+    system:`Tu es Marco, un barista italien sympathique à Florence. Tu parles UNIQUEMENT en italien simple.
+Réponds avec des phrases courtes et naturelles. Si l'utilisateur fait une erreur, corrige-le gentiment en disant "Si dice: [correction]".
+Commence par: "Buongiorno! Cosa prende?"
+Quand l'utilisateur dit au revoir, termine par "Arrivederci! Buona giornata!"`
+  },
+  {
+    id:"sc_train", emoji:"🚆", title:"À la gare de Rome",
+    profile:"all",
+    color:"#1B6BBE",
+    objective:"Acheter un billet pour Naples, demander l'heure du départ, trouver le quai.",
+    context:"Tu es à la gare Termini de Rome. Tu t'approches du guichet.",
+    targets:[
+      {phrase:"buongiorno", pts:1, hint:"Salue le guichetier"},
+      {phrase:"biglietto", pts:2, hint:"Demande un billet"},
+      {phrase:"napoli", pts:1, hint:"Pour quelle destination ?"},
+      {phrase:"che ora parte", pts:2, hint:"À quelle heure part le train ?"},
+      {phrase:"quanto costa", pts:2, hint:"Demande le prix"},
+      {phrase:"grazie", pts:1, hint:"Remercie"},
+    ],
+    system:`Tu es Sofia, une guichetière à la gare Termini de Rome. Tu parles en italien simple.
+Si l'utilisateur fait une erreur, corrige-le: "Si dice: [correction]".
+Réponds aux questions sur les horaires et prix de façon réaliste (invente des horaires plausibles).
+Commence par: "Buongiorno! Posso aiutarla?"`
+  },
+  {
+    id:"sc_gelateria", emoji:"🍦", title:"À la gelateria",
+    profile:"p1",
+    color:"#D4387A",
+    objective:"Commander deux boules de gelato, choisir les parfums, payer.",
+    context:"Tu es devant le comptoir d'une gelateria à Rome. Le gelatiere t'attend.",
+    targets:[
+      {phrase:"buongiorno", pts:1, hint:"Salue !"},
+      {phrase:"gelato", pts:1, hint:"Qu'est-ce que tu veux ?"},
+      {phrase:"due palline", pts:2, hint:"Combien de boules ?"},
+      {phrase:"cioccolato", pts:1, hint:"Quel parfum ?"},
+      {phrase:"fragola", pts:1, hint:"Et l'autre parfum ?"},
+      {phrase:"quanto costa", pts:2, hint:"Combien ça coûte ?"},
+      {phrase:"grazie", pts:1, hint:"Merci !"},
+    ],
+    system:`Tu es Lucia, une gelatière enthousiaste à Rome. Tu parles en italien simple et tu es adorable avec les enfants.
+Si l'utilisateur fait une erreur, corrige-le gentiment: "Si dice: [correction] 😊".
+Propose des parfums, demande si c'est en cône ou en pot.
+Commence par: "Ciao! Che gusto vuoi?"`
+  },
+  {
+    id:"sc_museo", emoji:"🏛️", title:"Au musée des Offices",
+    profile:"p2",
+    color:"#7B5EA7",
+    objective:"Acheter un billet, demander un audioguide, s'informer sur une œuvre.",
+    context:"Tu arrives aux Offices à Florence. Tu t'approches de la caisse.",
+    targets:[
+      {phrase:"buongiorno", pts:1, hint:"Salue"},
+      {phrase:"biglietto", pts:1, hint:"Tu veux un billet"},
+      {phrase:"audioguida", pts:2, hint:"Et un audioguide ?"},
+      {phrase:"chi ha dipinto", pts:3, hint:"Demande qui a peint..."},
+      {phrase:"rinascimento", pts:2, hint:"Parle de la Renaissance"},
+      {phrase:"magnifico", pts:1, hint:"C'est magnifique !"},
+      {phrase:"grazie", pts:1, hint:"Merci"},
+    ],
+    system:`Tu es Alessandro, un guide-caissier aux Offices à Florence. Tu parles en italien cultivé mais simple.
+Tu es passionné d'art et tu aimes partager des anecdotes sur les œuvres.
+Si l'utilisateur fait une erreur, corrige-le: "Si dice: [correction]".
+Commence par: "Buongiorno! Benvenuta agli Uffizi! Desidera?"`
+  },
+  {
+    id:"sc_hotel", emoji:"🏨", title:"Check-in à l'hôtel",
+    profile:"p3",
+    color:"#2E7D32",
+    objective:"Faire son check-in, demander le WiFi, signaler un problème dans la chambre.",
+    context:"Tu arrives à ton hôtel à Milan après un long voyage. Tu t'approches de la réception.",
+    targets:[
+      {phrase:"buonasera", pts:1, hint:"C'est le soir, salue"},
+      {phrase:"prenotazione", pts:2, hint:"Tu as une réservation"},
+      {phrase:"wifi", pts:1, hint:"Demande le WiFi"},
+      {phrase:"funziona", pts:2, hint:"Est-ce que ça marche ?"},
+      {phrase:"riscaldamento", pts:2, hint:"Le chauffage..."},
+      {phrase:"non funziona", pts:2, hint:"...ne marche pas"},
+      {phrase:"grazie", pts:1, hint:"Merci"},
+    ],
+    system:`Tu es Giulia, une réceptionniste professionnelle à Milan. Tu parles en italien clair.
+Tu gères le check-in efficacement. Le chauffage de la chambre 204 ne fonctionne pas (problème connu).
+Si l'utilisateur fait une erreur, corrige-le: "Si dice: [correction]".
+Commence par: "Buonasera! Benvenuto! Ha una prenotazione?"`
+  },
+];
+
+const checkScenario = async (system, history) => {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "x-api-key":AKEY,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true"
+    },
+    body:JSON.stringify({
+      model:"claude-haiku-4-5",
+      max_tokens:300,
+      system,
+      messages:history
+    })
+  });
+  const d = await res.json();
+  return d.content[0].text;
+};
 const DEFAULT_PROFILES = [
   { id:"p1", name:"Lola",   avatar:"🎀", scores:{}, total_score:0 },
   { id:"p2", name:"Fiona",  avatar:"🌸", scores:{}, total_score:0 },
