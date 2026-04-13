@@ -422,44 +422,6 @@ const makeThemes = (pid) => {
       {q:"Que signifie 'quinto' ?",opts:["Quatrième","Cinquième","Sixième","Dernier"],a:1},
     ]
   };
-      {id:1, type:"phrases", title:"Jours, mois & dates",
-        intro:"Pour parler de quand, prendre rendez-vous, lire les horaires !",
-        items:[
-          {fr:"Aujourd'hui",          it:"Oggi",               pr:"OD-dji"},
-          {fr:"Demain",               it:"Domani",             pr:"do-MA-ni"},
-          {fr:"Hier",                 it:"Ieri",               pr:"IÉ-ri"},
-          {fr:"Quelle est la date ?", it:"Che data è oggi?",   pr:"ké DA-ta è OD-dji"},
-          {fr:"Le 15 août",           it:"Il quindici agosto", pr:"il KOUIN-di-tshi a-GOS-to"},
-        ]},
-      {id:2, type:"phrases", title:"Distances & orientations",
-        intro:"Pour savoir si c'est loin, combien de temps, dans quelle direction !",
-        items:[
-          {fr:"C'est à combien de km ?", it:"A quanti chilometri è?", pr:"a KOUAN-ti ki-LO-mé-tri è"},
-          {fr:"C'est à 10 minutes",      it:"È a dieci minuti",       pr:"è a DIÉ-tshi mi-NOU-ti"},
-          {fr:"À pied ou en voiture ?",  it:"A piedi o in macchina?", pr:"a PIÉ-di o in MAK-ki-na"},
-          {fr:"C'est près d'ici",        it:"È vicino da qui",        pr:"è vi-TSHI-no da koui"},
-          {fr:"C'est loin",              it:"È lontano",              pr:"è lon-TA-no"},
-        ]},
-      {id:3, type:"grammar", title:"Les chiffres de 1 à 1000",
-        intro:"Les chiffres italiens ressemblent beaucoup au français !",
-        tip:"💡 Les dizaines : venti (20), trenta (30), quaranta (40), cinquanta (50)…",
-        items:[
-          {fr:"1 → 5",  it:"Uno, due, tre, quattro, cinque",  pr:"OU-no, DOU-é, TRÉ, KOUAT-tro, THIN-koué"},
-          {fr:"6 → 10", it:"Sei, sette, otto, nove, dieci",   pr:"SÉI, SÈT-té, OT-to, NO-vé, DIÉ-tshi"},
-          {fr:"20",     it:"Venti",                           pr:"VÈN-ti"},
-          {fr:"50",     it:"Cinquanta",                       pr:"tshink-KOUAN-ta"},
-          {fr:"100",    it:"Cento",                           pr:"TSHÈN-to"},
-          {fr:"1000",   it:"Mille",                           pr:"MIL-lé"},
-        ]},
-    ],
-    quiz:[
-      {q:"Comment demander le prix ?",opts:["Quanto costa?","Come stai?","Dove sei?","Che ora è?"],a:0},
-      {q:"Que signifie 'domani' ?",opts:["Hier","Aujourd'hui","Demain","Ce soir"],a:2},
-      {q:"Comment dire 'C'est à 10 minutes' ?",opts:["È a dieci ore","È a dieci minuti","È a dieci km","È a dieci metri"],a:1},
-      {q:"Que signifie 'è lontano' ?",opts:["C'est proche","C'est à gauche","C'est loin","C'est gratuit"],a:2},
-      {q:"Comment dit-on '100' en italien ?",opts:["Mille","Venti","Cento","Cinquanta"],a:2},
-    ]
-  };
   const QUIZ_SAL = [
     {q:"Comment dit-on 'Bonjour' (le matin) ?",opts:["Buonasera","Buongiorno","Ciao","Prego"],a:1},
     {q:"Que signifie 'Prego' ?",opts:["S'il vous plaît","Merci","De rien","Au revoir"],a:2},
