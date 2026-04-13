@@ -1340,6 +1340,41 @@ export default function ItalianApp() {
           </div>
         );
       }
+      // MCQ CONTEXT
+      if(q.type==="mcq_context"){
+        return(
+          <div style={{fontFamily:"'Nunito',sans-serif",background:"#FFFBF5",minHeight:"100vh",maxWidth:480,margin:"0 auto",paddingBottom:40}}>
+            <style>{CSS}</style>
+            <FlagStripe/>
+            <QuestionHeader/>
+            <div style={{padding:"16px 16px 0"}}>
+              <div style={{background:"white",borderRadius:18,padding:"18px",boxShadow:"0 3px 12px rgba(0,0,0,0.08)",marginBottom:16,border:`2px solid ${col}20`}}>
+                <div style={{fontSize:10,color:col,fontWeight:800,letterSpacing:1,marginBottom:8}}>🇮🇹 CHOISIS LA BONNE PHRASE</div>
+                <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:18,color:"#1a1a1a",lineHeight:1.4}}>{q.q}</div>
+                {q.context_fr&&<div style={{fontSize:12,color:"#aaa",marginTop:6}}>🇫🇷 {q.context_fr}</div>}
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:9}}>
+                {q.options.map((opt,oi)=>{
+                  const chosen=feedback&&answers[qIdx]?.answer===oi;
+                  const isCorrect=oi===q.correct;
+                  const bg=feedback?(isCorrect?"#F0FFF5":chosen?"#FFF5F5":"white"):"white";
+                  const border=feedback?(isCorrect?"#86EFAC":chosen?"#FCA5A5":"#EEE"):"#EEE";
+                  return(
+                    <button key={oi} className="opt" disabled={!!feedback}
+                      onClick={()=>!feedback&&submitAnswer(oi)}
+                      style={{padding:"12px 14px",borderRadius:13,textAlign:"left",border:`2px solid ${border}`,background:bg,fontSize:13,fontWeight:600,color:"#555",fontFamily:"'Nunito'",cursor:feedback?"default":"pointer"}}>
+                      <span style={{fontSize:10,color:"#ccc",marginRight:6,fontWeight:700}}>{String.fromCharCode(65+oi)}.</span>{opt}
+                      {feedback&&isCorrect&&<span style={{float:"right"}}>✅</span>}
+                      {feedback&&chosen&&!isCorrect&&<span style={{float:"right"}}>❌</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <FeedbackBar/>
+          </div>
+        );
+      }
 
       // FILL BLANK
       if(q.type==="fill_blank"){
@@ -1417,6 +1452,43 @@ export default function ItalianApp() {
                 <button onClick={()=>setJigsawSel([])}
                   style={{width:"100%",padding:"10px",borderRadius:13,border:`2px solid #EEE`,background:"white",color:"#aaa",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'Nunito'"}}>
                   🔄 Recommencer
+                </button>
+              )}
+            </div>
+            <FeedbackBar/>
+          </div>
+        );
+      }
+      // VERB CONJUGATION
+      if(q.type==="verb_conjugation"){
+        return(
+          <div style={{fontFamily:"'Nunito',sans-serif",background:"#FFFBF5",minHeight:"100vh",maxWidth:480,margin:"0 auto",paddingBottom:40}}>
+            <style>{CSS}</style>
+            <FlagStripe/>
+            <QuestionHeader/>
+            <div style={{padding:"16px 16px 0"}}>
+              <div style={{background:"white",borderRadius:18,padding:"18px",boxShadow:"0 3px 12px rgba(0,0,0,0.08)",marginBottom:16,border:`2px solid ${col}20`}}>
+                <div style={{fontSize:10,color:col,fontWeight:800,letterSpacing:1,marginBottom:8}}>🇮🇹 CONJUGUE LE VERBE</div>
+                <div style={{fontSize:13,color:"#888",marginBottom:6}}>🇫🇷 {q.sentence_fr}</div>
+                <div style={{fontFamily:"'Baloo 2'",fontWeight:800,fontSize:20,color:"#1a1a1a",lineHeight:1.5}}>
+                  {q.before_it} <span style={{background:`${col}20`,border:`2px dashed ${col}`,borderRadius:8,padding:"2px 14px",color:col}}>?</span>
+                </div>
+                <div style={{fontSize:12,color:"#aaa",marginTop:8}}>Verbe : <span style={{fontWeight:700,color:col}}>{q.verb_infinitive_it}</span> · {q.person_fr}</div>
+                {q.hint&&<div style={{fontSize:12,color:"#bbb",marginTop:4}}>{q.hint}</div>}
+              </div>
+              <textarea
+                value={userInput}
+                onChange={e=>setUserInput(e.target.value)}
+                disabled={!!feedback||checking}
+                placeholder="Écris la phrase complète en italien…"
+                rows={2}
+                style={{width:"100%",padding:"13px",borderRadius:13,border:`2px solid ${col}40`,fontSize:15,fontWeight:600,color:"#1a1a1a",resize:"none",outline:"none",background:"white",fontFamily:"'Nunito'"}}
+              />
+              {!feedback&&(
+                <button onClick={()=>userInput.trim()&&submitAnswer(userInput.trim())}
+                  disabled={!userInput.trim()||checking}
+                  style={{width:"100%",marginTop:10,padding:"13px",borderRadius:13,border:"none",background:userInput.trim()&&!checking?col:"#DDD",color:"white",fontSize:15,fontWeight:800,cursor:userInput.trim()&&!checking?"pointer":"not-allowed",fontFamily:"'Nunito'"}}>
+                  {checking?<span style={{animation:"pulse 1s infinite"}}>⏳ Claude vérifie…</span>:"✓ Valider"}
                 </button>
               )}
             </div>
