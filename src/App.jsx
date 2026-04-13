@@ -371,19 +371,57 @@ const makeThemes = (pid) => {
         {q:"Que signifie 'un castello' ?",opts:["Un temple","Une cathédrale","Un château fort","Un palais"],a:2},
       ]},
   };
-  const NUMBERS_THEME = {
+ const NUMBERS_THEME = {
     id:"chiffres", emoji:"🔢", title:"Chiffres, Dates & Distances",
     subtitle:"Compter, se repérer dans le temps et l'espace", color:"#0277BD", light:"#E3F2FD",
     lessons:[
-      {id:0, type:"phrases", title:"Les chiffres en pratique",
-        intro:"En Italie, on marchande, on commande, on compte !",
+      {id:0, type:"phrases", title:"Compter de 1 à 20 🔢",
+        intro:"La base de tout ! Ces chiffres reviennent dans chaque situation de voyage.",
         items:[
-          {fr:"Combien ça coûte ?",      it:"Quanto costa?",       pr:"KOUAN-to KOS-ta"},
-          {fr:"C'est combien en tout ?", it:"Quant'è in tutto?",   pr:"koan-TÈ in TOUT-to"},
-          {fr:"Cinq euros",              it:"Cinque euro",         pr:"THIN-koué EU-ro"},
-          {fr:"À quelle heure ?",        it:"A che ora?",          pr:"a ké O-ra"},
-          {fr:"Il est midi",             it:"È mezzogiorno",       pr:"è mèd-dzo-DJOR-no"},
+          {fr:"1 — un / 2 — deux / 3 — trois", it:"Uno — due — tre",             pr:"OU-no — DOU-é — TRÉ"},
+          {fr:"4 — quatre / 5 — cinq",          it:"Quattro — cinque",            pr:"KOUAT-tro — THIN-koué"},
+          {fr:"6 — six / 7 — sept / 8 — huit",  it:"Sei — sette — otto",          pr:"SÉI — SÈT-té — OT-to"},
+          {fr:"9 — neuf / 10 — dix",            it:"Nove — dieci",                pr:"NO-vé — DIÉ-tshi"},
+          {fr:"11 à 15",                         it:"Undici, dodici, tredici, quattordici, quindici", pr:"OUN-di-tshi... KOUIN-di-tshi"},
         ]},
+      {id:1, type:"phrases", title:"Les dizaines & grands nombres 💯",
+        intro:"Pour les prix, les distances, les horaires — indispensable !",
+        items:[
+          {fr:"20 / 30 / 40",      it:"Venti / Trenta / Quaranta",   pr:"VÈN-ti / TRÈN-ta / koua-RAN-ta"},
+          {fr:"50 / 60 / 70",      it:"Cinquanta / Sessanta / Settanta", pr:"tshink-KOUAN-ta / sès-SAN-ta / sèt-TAN-ta"},
+          {fr:"80 / 90 / 100",     it:"Ottanta / Novanta / Cento",   pr:"ot-TAN-ta / no-VAN-ta / TSHÈN-to"},
+          {fr:"1 000 / 1 000 000", it:"Mille / Un milione",          pr:"MIL-lé / oun mi-LIO-né"},
+          {fr:"21 / 35 / 48",      it:"Ventuno / Trentacinque / Quarantotto", pr:"vèn-TOU-no / trèn-ta-THIN-koué / koua-ran-TOT-to"},
+        ]},
+      {id:2, type:"phrases", title:"Les chiffres en situation 🛒",
+        intro:"Comment utiliser les chiffres dans la vraie vie en Italie !",
+        items:[
+          {fr:"Ça coûte 3 euros 50",          it:"Costa tre euro e cinquanta centesimi", pr:"KOS-ta TRÉ EU-ro é tshink-KOUAN-ta tshèn-TÉ-zi-mi"},
+          {fr:"Je voudrais 2 billets",         it:"Vorrei due biglietti",                pr:"vor-RÉI DOU-é bi-LIÈ-ti"},
+          {fr:"Nous sommes 4 personnes",       it:"Siamo in quattro",                    pr:"SIA-mo in KOUAT-tro"},
+          {fr:"Le train part à 14h30",         it:"Il treno parte alle quattordici e trenta", pr:"il TRÉ-no PAR-té AL-lé kouat-TOR-di-tshi é TRÈN-ta"},
+          {fr:"C'est au 5ème étage",           it:"È al quinto piano",                   pr:"è al KOUIN-to PIA-no"},
+        ]},
+      {id:3, type:"grammar", title:"L'heure & les ordinaux 🕐",
+        intro:"Quelle heure est-il ? C'est le premier, le deuxième… Les ordinaux italiens !",
+        tip:"💡 Pour l'heure : 'Sono le + chiffre'. Ex: 'Sono le tre' = il est 3h. Exception : 'È l'una' = il est 1h !",
+        items:[
+          {fr:"Il est 1h / 2h / 3h",    it:"È l'una / Sono le due / Sono le tre",  pr:"è LOU-na / SO-no lé DOU-é / SO-no lé TRÉ"},
+          {fr:"À midi / minuit",         it:"A mezzogiorno / A mezzanotte",         pr:"a mèd-dzo-DJOR-no / a mèd-dza-NOT-té"},
+          {fr:"1er / 2ème / 3ème",       it:"Primo / Secondo / Terzo",              pr:"PRI-mo / sé-KON-do / TÈRT-so"},
+          {fr:"4ème / 5ème / dernier",   it:"Quarto / Quinto / Ultimo",             pr:"KOUAR-to / KOUIN-to / OUL-ti-mo"},
+          {fr:"Quelle heure est-il ?",   it:"Che ore sono?",                        pr:"ké O-ré SO-no"},
+          {fr:"À quelle heure ?",        it:"A che ora?",                           pr:"a ké O-ra"},
+        ]},
+    ],
+    quiz:[
+      {q:"Comment dit-on '7' en italien ?",opts:["Sei","Sette","Otto","Nove"],a:1},
+      {q:"Que signifie 'venti' ?",opts:["12","15","20","30"],a:2},
+      {q:"Comment dire 'il est 3h' ?",opts:["È l'una","Sono le due","Sono le tre","Sono le quattro"],a:2},
+      {q:"Comment dire 'nous sommes 4' ?",opts:["Siamo in due","Siamo in tre","Siamo in quattro","Siamo in cinque"],a:2},
+      {q:"Que signifie 'quinto' ?",opts:["Quatrième","Cinquième","Sixième","Dernier"],a:1},
+    ]
+  };
       {id:1, type:"phrases", title:"Jours, mois & dates",
         intro:"Pour parler de quand, prendre rendez-vous, lire les horaires !",
         items:[
